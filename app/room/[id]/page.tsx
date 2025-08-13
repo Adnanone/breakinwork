@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ type Message = {
   created_at: string;
 };
 
-type RoomHeader = { prompt: string | null; expires_at: string | null } | null;
+// Removed unused RoomHeader type
 
 export default function RoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +52,7 @@ export default function RoomPage() {
     if (!storedName) setShowIntro(true);
   }, []);
 
-  async function recordParticipant(displayName: string, currentMood: string) {
+  const recordParticipant = useCallback(async (displayName: string, currentMood: string) => {
     const key = `biw_participant_${id}`;
     const existing = localStorage.getItem(key);
     if (existing) {
@@ -68,12 +68,12 @@ export default function RoomPage() {
       localStorage.setItem(key, data.id);
       setParticipantId(data.id);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     if (!name) return;
     recordParticipant(name, mood);
-  }, [name, mood]);
+  }, [name, mood, recordParticipant]);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,7 +95,14 @@ export default function RoomPage() {
 
       if (!isMounted) return;
 
-      const r: any = roomRes.data || null;
+      type RoomRow = {
+        prompt: string | null;
+        expires_at: string | null;
+        starts_at?: string | null;
+        created_at?: string | null;
+        max_minutes?: number | null;
+      } | null;
+      const r = (roomRes.data as RoomRow) || null;
       setPrompt(r?.prompt ?? null);
       const expiresAtDate: Date | null = r?.expires_at ? new Date(r.expires_at) : null;
       const startsAtDate: Date | null = r?.starts_at ? new Date(r.starts_at) : (r?.created_at ? new Date(r.created_at) : null);

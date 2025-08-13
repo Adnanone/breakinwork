@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Clock, Users, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { Clock, Users, ArrowRight, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface JoinRoomModalProps {
@@ -61,11 +61,11 @@ export function JoinRoomModal({ onClose }: JoinRoomModalProps) {
         participantCount: 3,
         maxParticipants: 8,
         timeRemaining: 4,
-        status: 'live'
+        status: 'live' as const
       };
 
       setRoomInfo(mockRoomInfo);
-    } catch (error) {
+    } catch {
       setError('Room not found or has expired');
     } finally {
       setIsLoading(false);

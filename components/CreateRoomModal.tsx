@@ -102,7 +102,7 @@ export function CreateRoomModal({ onClose }: CreateRoomModalProps) {
       
       setCreatedRoom(roomData);
       setStep('created');
-    } catch (error) {
+    } catch {
       alert("Error creating room");
     } finally {
       setIsSubmitting(false);

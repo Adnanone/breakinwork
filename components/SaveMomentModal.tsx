@@ -110,7 +110,6 @@ export function SaveMomentModal({ roomId, prompt, durationMinutes, participantsC
           line = words[n];
           if (linesDrawn >= maxLines - 1) {
             // Truncate remaining
-            let rest = words.slice(n + 1).join(' ');
             let final = line;
             while (ctx.measureText(final + '…').width > maxWidth && final.length > 0) {
               final = final.slice(0, -1);
@@ -186,10 +185,10 @@ export function SaveMomentModal({ roomId, prompt, durationMinutes, participantsC
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.src = latestImage.mediaUrl;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = resolve; // ignore CORS failures silently
-        });
+    await new Promise<void>((resolve) => {
+      img.onload = () => resolve();
+      img.onerror = () => resolve(); // ignore CORS failures silently
+    });
         const thumbW = 280;
         const thumbH = 180;
         const thumbX = cardX + cardW - pad - thumbW;
