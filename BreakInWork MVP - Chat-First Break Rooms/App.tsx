@@ -1,86 +1,101 @@
-"use client";
-
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CreateRoomModal } from '@/components/CreateRoomModal';
-import { JoinRoomModal } from '@/components/JoinRoomModal';
-import { PublicRoomCard } from '@/components/PublicRoomCard';
+import React, { useState } from 'react';
+import { Button } from './components/ui/button';
+import { Card } from './components/ui/card';
+import { Badge } from './components/ui/badge';
+import { Avatar, AvatarFallback } from './components/ui/avatar';
+import { CreateRoomModal } from './components/CreateRoomModal';
+import { JoinRoomModal } from './components/JoinRoomModal';
+import { BreakRoom } from './components/BreakRoom';
+import { PublicRoomCard } from './components/PublicRoomCard';
 import { Clock, Users, Sparkles, Download, Zap, Globe } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 
-type AppState = 'landing' | 'create' | 'join';
+type AppState = 'landing' | 'create' | 'join' | 'room';
 
-type UiRoom = {
-  id: string;
-  hostName: string;
-  prompt: string;
-  category: string;
-  duration: number;
-  participantCount: number;
-  maxParticipants: number;
-  startsAt: Date;
-  timeRemaining?: number;
-  status: 'live' | 'starting-soon';
-  isPro?: boolean;
-};
+// Mock public rooms data
+const PUBLIC_ROOMS = [
+  {
+    id: 'pub1',
+    hostName: 'Sarah Chen',
+    prompt: 'Show the weirdest thing on your desk',
+    category: 'random',
+    duration: 5,
+    participantCount: 3,
+    maxParticipants: 8,
+    startsAt: new Date(Date.now() + 2 * 60 * 1000), // 2 minutes from now
+    status: 'starting-soon'
+  },
+  {
+    id: 'pub2', 
+    hostName: 'Alex Rivera',
+    prompt: 'Best career advice in 10 seconds',
+    category: 'business',
+    duration: 5,
+    participantCount: 5,
+    maxParticipants: 10,
+    startsAt: new Date(Date.now() - 1 * 60 * 1000), // Started 1 minute ago
+    timeRemaining: 4,
+    status: 'live'
+  },
+  {
+    id: 'pub3',
+    hostName: 'Jamie Foster',
+    prompt: 'One tool that changed your workflow',
+    category: 'dev',
+    duration: 5,
+    participantCount: 2,
+    maxParticipants: 6,
+    startsAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+    status: 'starting-soon'
+  },
+  {
+    id: 'pub4',
+    hostName: 'Morgan Kim',
+    prompt: 'Pitch a one-sentence impossible startup',
+    category: 'business',
+    duration: 30,
+    participantCount: 7,
+    maxParticipants: 15,
+    startsAt: new Date(Date.now() + 8 * 60 * 1000), // 8 minutes from now
+    status: 'starting-soon',
+    isPro: true
+  }
+];
 
-export default function Home() {
+export default function App() {
   const [currentState, setCurrentState] = useState<AppState>('landing');
-  const [rooms, setRooms] = useState<UiRoom[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<any>(null);
 
-  useEffect(() => {
-    const loadRooms = async () => {
-      const nowIso = new Date().toISOString();
-      const { data, error } = await supabase
-        .from('rooms')
-        .select('id, host_name, prompt, topic, is_pro, max_minutes, starts_at, expires_at, created_at')
-        .gt('expires_at', nowIso)
-        .order('starts_at', { ascending: true });
-      if (error || !data) return;
-
-      type DbRoom = { id: string; host_name: string; prompt: string | null; topic: string | null; is_pro: boolean; max_minutes: number; starts_at: string | null; expires_at: string; created_at: string };
-      const mapped: UiRoom[] = [];
-      for (const r of data as DbRoom[]) {
-        const startsAt = new Date(r.starts_at || r.created_at);
-        const expiresAt = new Date(r.expires_at);
-        const now = new Date();
-        const status: 'live' | 'starting-soon' = now >= startsAt && now < expiresAt ? 'live' : 'starting-soon';
-        const timeRemaining = status === 'live' ? Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / 60000)) : undefined;
-        const { count } = await supabase
-          .from('participants')
-          .select('id', { count: 'exact', head: true })
-          .eq('room_id', r.id);
-        mapped.push({
-          id: r.id,
-          hostName: r.host_name,
-          prompt: r.prompt || '',
-          category: (r.topic || 'random').toLowerCase(),
-          duration: r.max_minutes || 5,
-          participantCount: count ?? 0,
-          maxParticipants: 15,
-          startsAt,
-          timeRemaining,
-          status,
-          isPro: !!r.is_pro,
-        });
-      }
-      setRooms(mapped);
-    };
-
-    loadRooms();
-    const interval = setInterval(loadRooms, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const liveRooms = useMemo(() => rooms.filter(r => r.status === 'live'), [rooms]);
-  const upcomingRooms = useMemo(() => rooms.filter(r => r.status === 'starting-soon'), [rooms]);
-
-  const handleJoinPublicRoom = (room: UiRoom) => {
-    if (room.status !== 'live') return;
-    window.location.href = `/room/${room.id}`;
+  const handleCreateRoom = (roomData: any) => {
+    setCurrentRoom(roomData);
+    setCurrentState('room');
   };
+
+  const handleJoinRoom = (roomData: any) => {
+    setCurrentRoom(roomData);
+    setCurrentState('room');
+  };
+
+  const handleJoinPublicRoom = (room: any) => {
+    const roomData = {
+      ...room,
+      isJoining: true,
+      userName: 'Anonymous' // In real app, would get from user input
+    };
+    setCurrentRoom(roomData);
+    setCurrentState('room');
+  };
+
+  const handleLeaveRoom = () => {
+    setCurrentRoom(null);
+    setCurrentState('landing');
+  };
+
+  if (currentState === 'room') {
+    return <BreakRoom room={currentRoom} onLeave={handleLeaveRoom} />;
+  }
+
+  const liveRooms = PUBLIC_ROOMS.filter(room => room.status === 'live');
+  const upcomingRooms = PUBLIC_ROOMS.filter(room => room.status === 'starting-soon');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -179,7 +194,7 @@ export default function Home() {
           <Card className="p-6 text-center space-y-3">
             <Users className="w-8 h-8 mx-auto text-green-500" />
             <h3>Live Presence</h3>
-            <p className="text-sm text-muted-foreground">See who&apos;s here with mood indicators</p>
+            <p className="text-sm text-muted-foreground">See who's here with mood indicators</p>
           </Card>
           
           <Card className="p-6 text-center space-y-3">
@@ -199,9 +214,15 @@ export default function Home() {
         <div className="text-center space-y-6">
           <h2>Popular Break Prompts</h2>
           <div className="flex flex-wrap justify-center gap-3">
-            {["Weirdest client ask","One tool that changed your workflow","Show the weirdest thing on your desk","Best career advice in 10 seconds","Pitch a one-sentence impossible startup"].map((prompt) => (
+            {[
+              "Weirdest client ask",
+              "One tool that changed your workflow", 
+              "Show the weirdest thing on your desk",
+              "Best career advice in 10 seconds",
+              "Pitch a one-sentence impossible startup"
+            ].map((prompt) => (
               <div key={prompt} className="px-4 py-2 bg-white rounded-full border text-sm">
-                &quot;{prompt}&quot;
+                "{prompt}"
               </div>
             ))}
           </div>
@@ -210,11 +231,17 @@ export default function Home() {
 
       {/* Modals */}
       {currentState === 'create' && (
-        <CreateRoomModal onClose={() => setCurrentState('landing')} />
+        <CreateRoomModal
+          onClose={() => setCurrentState('landing')}
+          onCreate={handleCreateRoom}
+        />
       )}
       
       {currentState === 'join' && (
-        <JoinRoomModal onClose={() => setCurrentState('landing')} />
+        <JoinRoomModal
+          onClose={() => setCurrentState('landing')}
+          onJoin={handleJoinRoom}
+        />
       )}
     </div>
   );
